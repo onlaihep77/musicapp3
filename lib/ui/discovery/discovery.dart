@@ -39,7 +39,7 @@ class _DiscoveryTabState extends State<DiscoveryTab> {
       final jsonStr = await rootBundle.loadString('assets/songs.json');
       final raw = json.decode(jsonStr);
 
-      // Hỗ trợ cả 2 dạng JSON: [ {...}, ... ] hoặc { "songs": [ {...}, ... ] }
+      
       final List items;
       if (raw is List) {
         items = raw;
@@ -55,7 +55,7 @@ class _DiscoveryTabState extends State<DiscoveryTab> {
 
       setState(() {
         _loading = false;
-        _suggestions = []; // ⬅️ KHÔNG hiển thị gì khi chưa gõ
+        _suggestions = []; 
       });
     } catch (e) {
       setState(() => _loading = false);
@@ -72,7 +72,7 @@ class _DiscoveryTabState extends State<DiscoveryTab> {
     setState(() {
       _query = q; // để highlight
       if (qLower.isEmpty) {
-        _suggestions = []; // ⬅️ rỗng khi chưa gõ gì
+        _suggestions = []; //  rỗng khi chưa gõ gì
       } else {
         _suggestions = _all.where((s) {
           return s.title.toLowerCase().contains(qLower) ||
