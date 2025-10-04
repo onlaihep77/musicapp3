@@ -46,8 +46,10 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   double _currentAnimationPosition = 0.0;
   bool _isShuffle = false;
   late LoopMode _loopMode;
+  final Set<String> _likedSongIds = {}; // các bài đã tim
 
-  // ----- NEW: cache player state + subscription
+  String get _songKey => _song.id ?? _song.source; // fallback nếu chưa có id
+
   PlayerState? _ps;
   late final StreamSubscription<PlayerState> _playerSub;
 
@@ -76,29 +78,30 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     _loopMode = LoopMode.off;
 
     // ----- NEW: lắng nghe trạng thái player và điều khiển animation ở đây
-    _playerSub =
-        _audioPlayerManager.player.playerStateStream.listen((playerState) {
-          _ps = playerState;
-          if (!mounted) return;
+    _playerSub = _audioPlayerManager.player.playerStateStream.listen((
+      playerState,
+    ) {
+      _ps = playerState;
+      if (!mounted) return;
 
-          final processing = playerState.processingState;
-          final playing = playerState.playing;
+      final processing = playerState.processingState;
+      final playing = playerState.playing;
 
-          if (processing == ProcessingState.loading ||
-              processing == ProcessingState.buffering) {
-            _pauseRotationAnim();
-          } else if (processing == ProcessingState.completed) {
-            _stopRotationAnim();
-            _resetRotationAnim();
-          } else if (playing) {
-            _playRotationAnim();
-          } else {
-            _pauseRotationAnim();
-          }
+      if (processing == ProcessingState.loading ||
+          processing == ProcessingState.buffering) {
+        _pauseRotationAnim();
+      } else if (processing == ProcessingState.completed) {
+        _stopRotationAnim();
+        _resetRotationAnim();
+      } else if (playing) {
+        _playRotationAnim();
+      } else {
+        _pauseRotationAnim();
+      }
 
-          // cập nhật icon nút play/pause
-          setState(() {});
-        });
+      // cập nhật icon nút play/pause
+      setState(() {});
+    });
   }
 
   @override
@@ -133,8 +136,10 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               const SizedBox(height: 30),
               RotationTransition(
                 key: ValueKey(_song.source),
-                turns: Tween<double>(begin: 0.0, end: 1.0)
-                    .animate(_imageAnimController),
+                turns: Tween<double>(
+                  begin: 0.0,
+                  end: 1.0,
+                ).animate(_imageAnimController),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(radius),
                   child: FadeInImage.assetNetwork(
@@ -169,22 +174,43 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                           const SizedBox(height: 8),
                           Text(
                             _song.artist,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium!
+                            style: Theme.of(context).textTheme.bodyMedium!
                                 .copyWith(
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium!
-                                  .color,
-                            ),
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium!.color,
+                                ),
                           ),
                         ],
                       ),
                       IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.favorite_outline),
-                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: () {
+                          final k = _songKey;
+                          setState(() {
+                            if (_likedSongIds.contains(k)) {
+                              _likedSongIds.remove(k);
+                            } else {
+                              _likedSongIds.add(k);
+                            }
+                          });
+                        },
+                        icon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          transitionBuilder: (child, anim) =>
+                              ScaleTransition(scale: anim, child: child),
+                          child: _likedSongIds.contains(_songKey)
+                              ? const Icon(
+                                  Icons.favorite,
+                                  key: ValueKey('fav_on'),
+                                )
+                              : const Icon(
+                                  Icons.favorite_border,
+                                  key: ValueKey('fav_off'),
+                                ),
+                        ),
+                        color: _likedSongIds.contains(_songKey)
+                            ? Colors.red
+                            : Theme.of(context).colorScheme.primary,
                       ),
                     ],
                   ),
@@ -244,8 +270,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
           MediaButtonControl(
             function: _cycleRepeat,
             icon: _repeatingIcon(),
-            color:
-            _loopMode == LoopMode.off ? Colors.grey : Colors.deepPurple,
+            color: _loopMode == LoopMode.off ? Colors.grey : Colors.deepPurple,
             size: 24,
           ),
         ],
@@ -438,4 +463,5 @@ class _MediaButtonControlState extends State<MediaButtonControl> {
     );
   }
 }
+
 
